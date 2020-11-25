@@ -216,9 +216,9 @@ void loop() {
       }
       break;
     case RIGHT_EXIT:
+      spin(0);
       if (automatic && elapsed < at_exit_delay)
         break;
-      spin(0);
       if(automatic){
         transition_to(LEFT_ENTER);
       }
@@ -242,9 +242,9 @@ void loop() {
       }
       break;
     case LEFT_EXIT:
+      spin(0);
       if (automatic && elapsed < at_exit_delay)
         break;
-      spin(0);
       if(automatic){
         transition_to(RIGHT_ENTER);
       }
