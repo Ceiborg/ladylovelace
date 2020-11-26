@@ -15,6 +15,7 @@ const int TIME_TO_PANIC = 1500;
 
 // state
 enum state_t {
+  SETUP,
   MANUAL,
   RIGHT_ENTER,
   RIGHT_UPDATE,
@@ -26,10 +27,11 @@ enum state_t {
 };
 
 // configurable values at startup
+int play_mode = 5;
 long at_enter_delay = 40000;
 long at_exit_delay = 15000;
 
-state_t state = MANUAL;
+state_t state = SETUP;
 long switchedAt = 0;
 bool automatic = false;
 
@@ -51,6 +53,46 @@ bool leftBtnLongPress = false;
 void spin( int s);
 void scan_inputs(long now);
 
+void set_play_mode(int p){
+
+  play_mode = p;
+
+  // define timings based on play mode
+  switch(play_mode){
+    case 1:
+      at_enter_delay = 5000;
+      at_exit_delay = 5000;
+      break;
+    case 2:
+      at_enter_delay = 10000;
+      at_exit_delay = 5000;
+      break;
+    case 3:
+      at_enter_delay = 20000;
+      at_exit_delay = 10000;
+      break;
+    case 4:
+      at_enter_delay = 30000;
+      at_exit_delay = 10000;
+      break;
+    case 5:
+      at_enter_delay = 40000;
+      at_exit_delay = 15000;
+      break;
+    case 6:
+      at_enter_delay = 50000;
+      at_exit_delay = 15000;
+      break;
+    case 7:
+      at_enter_delay = 60000;
+      at_exit_delay = 15000;
+      break;
+    case 8:
+      at_enter_delay = 70000;
+      at_exit_delay = 15000;
+      break;
+  }
+}
 
 void setup() {  
   
@@ -71,27 +113,6 @@ void setup() {
   digitalWrite(GREEN_LED_PIN, LOW);
   
   // Serial.begin(9600);
-
-  // if panic pressed at startup, use different delay values
-  // for testing purposes
-  if (digitalRead(PANIC_BTN_PIN) == LOW){
-    delay(DEBOUNCE_TIME);
-    if (digitalRead(PANIC_BTN_PIN) == LOW){
-      at_enter_delay = 5000;
-      at_exit_delay = 5000;
-      // give red feedback to aknowledge button was read
-      digitalWrite(BLUE_LED_PIN, HIGH);
-      while(digitalRead(PANIC_BTN_PIN) == LOW)
-        delay(10);
-      digitalWrite(BLUE_LED_PIN, LOW);
-    }
-  }else{
-    // give blue feedback on normal mode
-    for (int i =0; i<=10; i++){
-      digitalWrite(BLUE_LED_PIN, i%2);
-      delay(100);
-    }
-  }
 
 }
 
@@ -120,6 +141,19 @@ void animate_leds(){
   long elapsed = now - switchedAt;
 
   switch(state){
+    // setup
+    case SETUP:
+      {
+        // blink signalling play_mode number
+        long c = 180;
+        if(elapsed > c * 22)
+          // reset timer
+          transition_to(SETUP);
+        else if ( elapsed < play_mode * c * 2){
+          digitalWrite(GREEN_LED_PIN, ((elapsed/c)+1) % 2);
+         }
+      }
+      break;
     // idle
     case MANUAL:
       fade_leds( elapsed, 2000, 0, 0, 40, 255, 40, 255);
@@ -129,15 +163,18 @@ void animate_leds(){
     case RIGHT_ENTER: 
       {
         if ( elapsed < at_enter_delay - 2000){
-          // update randomly every 0.1s
-          if( elapsed % 100 == 0){
-            byte r = random(255);
-            byte g = random(255);
-            byte b = random(255);
-            // update leds
-            analogWrite(RED_LED_PIN, r);
-            analogWrite(GREEN_LED_PIN, g);
-            analogWrite(BLUE_LED_PIN, b);
+          // only run the last 3 seconds
+          if ( elapsed > at_enter_delay - 2000 - 3000){
+            // update randomly every 0.1s
+            if( elapsed % 100 == 0){
+              byte r = random(255);
+              byte g = random(255);
+              byte b = random(255);
+              // update leds
+              analogWrite(RED_LED_PIN, r);
+              analogWrite(GREEN_LED_PIN, g);
+              analogWrite(BLUE_LED_PIN, b);
+            }
           }
         }
         else{
@@ -186,11 +223,22 @@ void loop() {
   scan_inputs(now);
   
   // check panic buttons in first place
-  if((state != PANIC) && panicBtnPressed ){
+  if((state != SETUP) && (state != PANIC) && panicBtnPressed ){
     state= PANIC;    
   } else{
 
   switch(state){
+    case SETUP:
+      if(rightBtnReleased && play_mode < 8 ){
+        transition_to(SETUP);
+        set_play_mode(play_mode + 1);
+      } else if(leftBtnReleased && play_mode > 0 ){
+        transition_to(SETUP);
+        set_play_mode(play_mode - 1);
+      } else if(panicBtnPressed ){
+        transition_to(MANUAL);
+      }   
+      break;
     case MANUAL:
       if(rightBtnReleased ){
         transition_to(RIGHT_ENTER);
